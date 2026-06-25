@@ -38,5 +38,6 @@ raku g.raku -u=foobar -v=foxbar --sp=-1 --ep=-0.1 --match_bonus=0.01 --mismatch=
 Result:
 
 ```
+score: -0.65
 backtrace: [[1 1 A] [2 2 A] [3 3 A] [4 4 A] [5 5 A] [6 6 A]]
 ```
