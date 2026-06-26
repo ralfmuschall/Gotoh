@@ -10,6 +10,25 @@
 #  1: before/after each step in trace matrices
 #  2: before/after each step in computematrix
 
+# minimalist .Str for a matrix
+sub ms($a --> Str) {
+    if ($a.^name ne 'Array') { return $a.Str; }
+    if ($a[0].^name ne 'Array') { return $a.Str; }
+    my $s0='[';
+    my $s='';
+    for ($a[*]) -> $row {
+        $s ~= $s0;
+        $s0=' ';
+        $s ~= '[';
+        for ($row[*]) -> $thing {
+            $s ~= ( ($thing == -Inf) ?? '-∞' !! $thing ) ~ ' ';
+        }
+        $s ~= "]\n";
+    }
+    return $s ~ ']';
+}
+    
+
 class Gotoh {
     has $!u is required is built; # input strings u,v
     has $!v is required is built;
@@ -38,12 +57,9 @@ class Gotoh {
         self.computematrix;
     }
     method preparematrix() {
-        @!A=[0 xx $!n+1] xx $!m+1;
-        @!B=[0 xx $!n+1] xx $!m+1;
-        @!C=[0 xx $!n+1] xx $!m+1;
-        @!traceA=[0 xx $!n+1] xx $!m+1;
-        @!traceB=[0 xx $!n+1] xx $!m+1;
-        @!traceC=[0 xx $!n+1] xx $!m+1;
+        @!A=[[0 xx $!n+1] xx $!m+1];
+        @!B=[[0 xx $!n+1] xx $!m+1];
+        @!C=[[0 xx $!n+1] xx $!m+1];
         @!A[0;0]=0; @!B[0;0]=0; @!C[0;0]=0;
         for 1..$!m {
             @!A[$_;0]=$!minusinf;
@@ -55,18 +71,25 @@ class Gotoh {
             @!B[0;$_]=$!minusinf;
             @!C[0;$_]=self.g($_);
         }
+        if ($!DEBUG +& 4) {
+            note "init\nA=", ms @!A;
+            note 'B=', ms @!B;
+            note 'C=', ms @!C;
+        }
+        @!traceA=[[0 xx $!n+1] xx $!m+1];
+        @!traceB=[[0 xx $!n+1] xx $!m+1];
+        @!traceC=[[0 xx $!n+1] xx $!m+1];
+        if ($!DEBUG +& 2) {
+            note "init\ntraceA=", ms @!traceA;
+            note 'traceB=', ms @!traceB;
+            note 'traceC=', ms @!traceC;
+        }
     };
     method computematrix() {
         for 1..$!m -> $i {
             for 1..$!n -> $j {
-                if ($!DEBUG +& 4) { note 'before A=', @!A; say 'B=', @!B; say 'C=', @!C; }
-                if ($!DEBUG +& 2) {
-                    note 'before traceA=', @!traceA, "\ntraceB=", @!traceB, "\ntraceC=", @!traceC;
-                }
                 my $w=(@!U[$i-1]==@!V[$j-1]) ?? $!match_bonus !! $!mismatch;
-
                 my $a_prevs = ( @!A[$i-1;$j-1], @!B[$i-1;$j-1], @!C[$i-1;$j-1] );
-
                 my $amax = max(|$a_prevs);
                 @!A[$i;$j] = $amax + $w;
                 @!traceA[$i;$j] = $a_prevs.first(:k, * == $amax);
@@ -89,9 +112,11 @@ class Gotoh {
                 @!C[$i;$j] = $cmax;
                 @!traceC[$i;$j] = $c_prevs.first(:k, * == $cmax);
             
-                if ($!DEBUG +& 4) { note 'after A=', @!A, "\nB=", @!B, "\nC=", @!C; }
+                if ($!DEBUG +& 4) {
+                    note "after i=$i j=$j\nA=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
+                }
                 if ($!DEBUG +& 2) {
-                    note 'after traceA=', @!traceA, "\ntraceB=", @!traceB, "\ntraceC=", @!traceC;
+                    note "after i=$i j=$j\ntraceA=", (ms @!traceA), "\ntraceB=", (ms @!traceB), "\ntraceC=", (ms @!traceC);
                 }
             }
         }
@@ -124,5 +149,23 @@ class Gotoh {
             }
         }
         return @path;
+    }
+    method backtrace_string() {
+        my @path=self.backtrace;
+        my Str $res='';
+        for (@path) -> $triple {
+            my $i=$triple[0]; my $j=$triple[1]; my $which=$triple[2];
+            say "i=$i j=$j which=$which";
+            if ($which eq 'A') {
+                my $ui=@!U[$i-1].chr;
+                my $vj=@!V[$j-1].chr;
+                if ($ui ne $vj) { $res ~= "($ui -> $vj)"; }
+            } elsif ($which eq 'B') {
+                $res ~= '(-' ~ @!U[$i-1]  ~ ')';
+            } else {
+                $res ~= '(+' ~ (@!V[$j-1]).chr ~ ')';
+            }
+        }
+        return $res;
     }
 }
