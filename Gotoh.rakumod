@@ -9,6 +9,9 @@
 #  0: steps in backtrace
 #  1: before/after each step in trace matrices
 #  2: before/after each step in computematrix
+#  3: internals of backtrace_string
+#  4: restrict matrix output to the recently changed entry
+#  5: suppress output of initial matrices (when bit 1 and/or 2 are set)
 
 # minimalist .Str for a matrix
 sub ms($a --> Str) {
@@ -27,7 +30,6 @@ sub ms($a --> Str) {
     }
     return $s ~ ']';
 }
-    
 
 class Gotoh {
     has $!u is required is built; # input strings u,v
@@ -36,7 +38,6 @@ class Gotoh {
     has @!U; # bytes of u
     has $!n; # length of v
     has @!V; # bytes of v
-    has $.distance is rw;
     has @!A; # substitutions
     has @!B; # deletions (i.e. present in u, missing in v)
     has @!C; # insertions
@@ -47,12 +48,12 @@ class Gotoh {
     has Real $.match_bonus is required;
     has Real $.mismatch is required;
     has Real $.score is rw;
-    has Real $!minusinf=-Inf;
+    has @!path; # for backtrace
     method g(Int $l --> Real) { $!gap_start+($l-1)*$!gap_extend; };
     submethod TWEAK() {
         $!m=$!u.chars; $!n=$!v.chars;
         @!U=$!u.ords;  @!V=$!v.ords;
-        $!score=$!minusinf;
+        $!score=-Inf;
         self.preparematrix;
         self.computematrix;
     }
@@ -62,16 +63,16 @@ class Gotoh {
         @!C=[[0 xx $!n+1] xx $!m+1];
         @!A[0;0]=0; @!B[0;0]=0; @!C[0;0]=0;
         for 1..$!m {
-            @!A[$_;0]=$!minusinf;
+            @!A[$_;0]=-Inf;
             @!B[$_;0]=self.g($_);
-            @!C[$_;0]=$!minusinf;
+            @!C[$_;0]=-Inf;
         }
         for 1..$!n {
-            @!A[0;$_]=$!minusinf;
-            @!B[0;$_]=$!minusinf;
+            @!A[0;$_]=-Inf;
+            @!B[0;$_]=-Inf;
             @!C[0;$_]=self.g($_);
         }
-        if ($!DEBUG +& 4) {
+        if (($!DEBUG +& 4) && !($!DEBUG +& 32)) {
             note "init\nA=", ms @!A;
             note 'B=', ms @!B;
             note 'C=', ms @!C;
@@ -79,7 +80,7 @@ class Gotoh {
         @!traceA=[[0 xx $!n+1] xx $!m+1];
         @!traceB=[[0 xx $!n+1] xx $!m+1];
         @!traceC=[[0 xx $!n+1] xx $!m+1];
-        if ($!DEBUG +& 2) {
+        if (($!DEBUG +& 2) && !($!DEBUG +& 32)) {
             note "init\ntraceA=", ms @!traceA;
             note 'traceB=', ms @!traceB;
             note 'traceC=', ms @!traceC;
@@ -113,13 +114,21 @@ class Gotoh {
                 @!traceC[$i;$j] = $c_prevs.first(:k, * == $cmax);
             
                 if ($!DEBUG +& 4) {
-                    note "after i=$i j=$j\nA=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
+                    if ($!DEBUG +& 16) {
+                        note "i=$i j=$j A=", @!A[$i;$j], ' B=', @!B[$i;$j], ' C=', @!C[$i;$j];
+                    } else {
+                        note "after i=$i j=$j\nA=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
+                    }
                 }
                 if ($!DEBUG +& 2) {
-                    note "after i=$i j=$j\ntraceA=", (ms @!traceA), "\ntraceB=", (ms @!traceB), "\ntraceC=", (ms @!traceC);
+                    if ($!DEBUG +& 16) {
+                        note "i=$i j=$j tA=", @!traceA[$i;$j], ' tB=', @!traceB[$i;$j], ' tC=', @!traceC[$i;$j];
+                    } else {
+                        note "after i=$i j=$j\ntraceA=", (ms @!traceA), "\ntraceB=", (ms @!traceB), "\ntraceC=", (ms @!traceC);
+                    }
                 }
             }
-        }
+        }        
         $!score=max(@!A[$!m;$!n],@!B[$!m;$!n],@!C[$!m;$!n]);
     }
     method backtrace() {
@@ -127,11 +136,15 @@ class Gotoh {
         my $j = $!n;
         my $mabc=max(@!A[$i;$j], @!B[$i;$j], @!C[$i;$j]);
         my $mat = $mabc == @!A[$i;$j] ?? 'A' !! $mabc == @!B[$i;$j] ?? 'B' !! 'C';
-        my @path;
 
+        if ($!DEBUG +& 2) {
+            note "after\ntraceA=", ms @!traceA;
+            note 'traceB=', ms @!traceB;
+            note 'traceC=', ms @!traceC;
+        }
         while $i>=0 && $j>=0 && ($i > 0 || $j > 0) {
             if ($!DEBUG +& 1) { note "i=$i j=$j"; }
-            @path.unshift([$i, $j, $mat]);
+            @!path.unshift([$i, $j, $mat]);
             if $mat eq 'A' {
                 my $prev = @!traceA[$i;$j];
                 $mat = <A B C>[$prev];
@@ -148,20 +161,24 @@ class Gotoh {
                 $j--;
             }
         }
-        return @path;
+        return @!path;
     }
     method backtrace_string() {
         my @path=self.backtrace;
         my Str $res='';
         for (@path) -> $triple {
             my $i=$triple[0]; my $j=$triple[1]; my $which=$triple[2];
-            say "i=$i j=$j which=$which";
+            if ($!DEBUG +& 8) { note "i=$i j=$j which=$which"; }
             if ($which eq 'A') {
                 my $ui=@!U[$i-1].chr;
                 my $vj=@!V[$j-1].chr;
-                if ($ui ne $vj) { $res ~= "($ui -> $vj)"; }
+                if ($ui ne $vj) {
+                    $res ~= "($ui -> $vj)";
+                } else {
+                    $res ~= "(=$ui)";
+                }
             } elsif ($which eq 'B') {
-                $res ~= '(-' ~ @!U[$i-1]  ~ ')';
+                $res ~= '(-' ~ (@!U[$i-1]).chr  ~ ')';
             } else {
                 $res ~= '(+' ~ (@!V[$j-1]).chr ~ ')';
             }
