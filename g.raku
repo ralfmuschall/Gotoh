@@ -15,5 +15,6 @@ sub MAIN(Str:D :u($u), Str:D :v($v), Real:D :sp($gap_start),
                     mismatch => $mismatch,
                     DEBUG => $DEBUG);
     say 'score: ',$g.score;
-    say 'backtrace: ',$g.backtrace, $g.backtrace_string;
+    say 'backtrace: ',$g.backtrace;
+    #say $g.backtrace_string;
 }
