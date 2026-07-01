@@ -132,6 +132,8 @@ class Gotoh {
         $!score=max(@!A[$!m;$!n],@!B[$!m;$!n],@!C[$!m;$!n]);
     }
     method backtrace() {
+        # if several deletions or insertions occur in a row, only the
+        # first one is returned
         my $i = $!m;
         my $j = $!n;
         my $mabc=max(@!A[$i;$j], @!B[$i;$j], @!C[$i;$j]);
@@ -164,9 +166,10 @@ class Gotoh {
         return @!path;
     }
     method backtrace_string() {
-        my @path=self.backtrace;
+        # currently broken
+        self.backtrace unless defined @!path;
         my Str $res='';
-        for (@path) -> $triple {
+        for (@!path) -> $triple {
             my $i=$triple[0]; my $j=$triple[1]; my $which=$triple[2];
             if ($!DEBUG +& 8) { note "i=$i j=$j which=$which"; }
             if ($which eq 'A') {
