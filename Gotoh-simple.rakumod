@@ -5,6 +5,30 @@
 # All parameters are signed, i.e. penalties (gap_start, gap_extend, mismatch)
 # should be entered as negative numbers (match_bonus is probably positive or zero).
 
+# DEBUG: Bitmask
+#  0: steps in backtrace
+#  1: before/after each step in trace matrices
+#  2: before/after each step in computematrix
+#  3: internals of backtrace_string
+#  4: restrict matrix output to the recently changed entry
+# minimalist .Str for a matrix
+sub ms($a --> Str) {
+    if ($a.^name ne 'Array') { return $a.Str; }
+    if ($a[0].^name ne 'Array') { return $a.Str; }
+    my $s0='[';
+    my $s='';
+    for ($a[*]) -> $row {
+        $s ~= $s0;
+        $s0=' ';
+        $s ~= '[';
+        for ($row[*]) -> $thing {
+            $s ~= ( ($thing == -Inf) ?? '-∞' !! $thing ) ~ ' ';
+        }
+        $s ~= "]\n";
+    }
+    return $s ~ ']';
+}
+
 class Gotoh-simple {
     has $!u is required is built; # input strings u,v
     has $!v is required is built;
@@ -45,11 +69,15 @@ class Gotoh-simple {
             @!B[0;$_]=-Inf;
             @!C[0;$_]=self.g($_);
         }
+        if ($!DEBUG +& 4) {
+            note "init\nA=", ms @!A;
+            note 'B=', ms @!B;
+            note 'C=', ms @!C;
+        }
     };
     method computematrix() {
         for 1..$!m -> $i {
             for 1..$!n -> $j {
-                if ($!DEBUG) { note 'before A=', @!A; say 'B=', @!B; say 'C=', @!C; }
                 my $w=(@!U[$i-1]==@!V[$j-1]) ?? $!match_bonus !! $!mismatch;
                 my $a_prevs = ( @!A[$i-1;$j-1], @!B[$i-1;$j-1], @!C[$i-1;$j-1] );
                 my $amax = max(|$a_prevs);
@@ -67,8 +95,14 @@ class Gotoh-simple {
                     @!C[$i;$j-1]+$!gap_extend
                 );
                 my $cmax = max(|$c_prevs);
-                @!C[$i;$j] = $cmax;             
-               if ($!DEBUG) { note 'after A=', @!A, "\nB=", @!B, "\nC=", @!C; }
+                @!C[$i;$j] = $cmax;
+                if ($!DEBUG +& 4) {
+                    if ($!DEBUG +& 16) {
+                        note "i=$i j=$j A=", @!A[$i;$j], ' B=', @!B[$i;$j], ' C=', @!C[$i;$j];
+                    } else {
+                        note "after i=$i j=$j\nA=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
+                    }
+                }
             }
         }
         $!score=max(@!A[$!m;$!n],@!B[$!m;$!n],@!C[$!m;$!n]);
