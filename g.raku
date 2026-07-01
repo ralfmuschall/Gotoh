@@ -5,8 +5,8 @@ use Gotoh;
 
 sub MAIN(Str:D :u($u), Str:D :v($v), Real:D :sp($gap_start),
          Real:D :ep($gap_extend), Real:D :match_bonus($match_bonus),
-         Real:D :mismatch($mismatch),
-         Int:D :debug($DEBUG)=0
+         Real:D :mismatch($mismatch), Int:D :debug($DEBUG)=0,
+         Bool:D :s($stringify)=False
         ) {
     my $g=Gotoh.new(u=>$u, v=>$v,
                     gap_start => $gap_start,
@@ -16,5 +16,7 @@ sub MAIN(Str:D :u($u), Str:D :v($v), Real:D :sp($gap_start),
                     DEBUG => $DEBUG);
     say 'score: ',$g.score;
     say 'backtrace: ',$g.backtrace;
-    #say $g.backtrace_string;
+    if ($stringify) {
+        say $g.backtrace_string;
+    }
 }
