@@ -47,6 +47,7 @@ class Gotoh {
     has Real $.gap_extend is required;
     has Real $.match_bonus is required;
     has Real $.mismatch is required;
+    has Int $!wikipedia is built; # use wikipedia pseudocode instead of original paper
     has Real $.score is rw;
     has @!path; # for backtrace
     method g(Int $l --> Real) { $!gap_start+($l-1)*$!gap_extend; };
@@ -98,7 +99,7 @@ class Gotoh {
                 my $b_prevs = (
                     @!A[$i-1;$j]+$!gap_start,
                     @!B[$i-1;$j]+$!gap_extend,
-                    @!C[$i-1;$j]+$!gap_start
+                    $!wikipedia ?? (@!C[$i-1;$j]+$!gap_start) !! -Inf
                 );
                 my $bmax = max(|$b_prevs);
                 @!B[$i;$j] = $bmax;
@@ -106,7 +107,7 @@ class Gotoh {
                 
                 my $c_prevs = (
                     @!A[$i;$j-1]+$!gap_start,
-                    @!B[$i;$j-1]+$!gap_start,
+                    $!wikipedia ?? (@!B[$i;$j-1]+$!gap_start) !! -Inf,
                     @!C[$i;$j-1]+$!gap_extend
                 );
                 my $cmax = max(|$c_prevs);
