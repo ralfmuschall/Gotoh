@@ -61,13 +61,15 @@ from $C$ and we extend a pre-existing insertion.
 ### Bug (unsolved)
 
 ```bash
-raku g.raku -s -u=aa -v=bbb --sp=-1 --ep=-0.01 --match_bonus=0 --mismatch=-3 
+raku g.raku -s -u=a -v=bbb --sp=-1 --ep=-0.01 --match_bonus=0 --mismatch=-3 
 ```
 
-gives the correct score of -2.03 (one deletion of length 2 costing
-1.01, one insertion of length 3 costing 1.02) but the wrong trace `[[0
-2 A] [0 3 C] [1 3 B] [2 3 B]]` (i.e. one (mis)match, one insertion,
-two deletions).
+gives the correct score of -2.01 (one deletion of length 1 costing
+1.0, one insertion of length 3 costing 1.02) but the wrong trace `[[0
+2 A] [0 3 C] [1 3 B]]` (i.e. one (mis)match, one insertion, one
+deletion). The input data intentionally contains a prohibitively
+string mismatch penalty to enforce the use of only deletions and
+insertions.
 
 ### Description of the backtrace algorithm
 
@@ -113,7 +115,7 @@ $$traceA=traceB=traceC=\begin{bmatrix}0 & 0 & 0 & 0\\
 0 & 0 & 0 & 0\\
 0 & 0 & 0 & 0\end{bmatrix}$$
 
-Step $i=j=1$ sets $A_{11}$ to -0.75 (mismatch added on top of the 0 in $A_{00}$), $B_{11}=-2$ ($gapstart$ added to the -1 above in $C$), $C_{11}=-2$ ($gapstart added to the -1 on the left in $B$).
+Step $i=j=1$ sets $A_{11}$ to -0.75 (mismatch added on top of the 0 in $A_{00}$), $B_{11}=-2$ ($gapstart$ added to the -1 above in $C$), $C_{11}=-2$ ($gapstart$ added to the -1 on the left in $B$).
 
 $traceA$ remains unchanged, $traceB_{11}=2$ (i.e. we came from $C$), $traceC_{11}=1$ (we came from $B$).
 
@@ -144,3 +146,20 @@ before that was an insertion. Now $i=0$ and $j=1$, so we are at the
 start (the stop condition for the backtrace is that neither $i$ nor
 $j$ are negative and at least one is positive).
 
+
+### Step-by-step analysis of the buggy result
+
+$$\begin{array}{cccccccc}
+ i & j & A_{ij} & B_{ij} & C_{ij} & traceA_{ij} & traceB_{ij} & traceC_{ij} \\
+ \hline
+ 1 & 1 & -10 & -2 & -2 & 0 & 2 & 1\\
+ 1 & 2 & -11 & -2.01 & -2.01 & 2 & 2 & 2\\
+ 1 & 3 & -111 & -2.02 & -2.02 & 2 & 2 & 2
+\end{array}$$
+
+At $i=j=1$ $A_{11}$ is $-10$ as expected, $B_{11}=-2 (from $C_{01}=-1$
+and $gapstart$), $C_{11}=-2$ (from $B_{01}=-1$ and $gapstart$).
+
+$traceA_{11}=0$ because the variable `$a_prev` 
+
+TO BE CONTINUED
