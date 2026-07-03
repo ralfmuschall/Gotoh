@@ -21,12 +21,12 @@ sub ms($a --> Str) {
     my $s='';
     for ($a[*]) -> $row {
         $s ~= $s0;
-        $s0=' ';
+        $s0="\n";
         $s ~= '[';
         for ($row[*]) -> $thing {
             $s ~= ( ($thing == -Inf) ?? '-∞' !! $thing ) ~ ' ';
         }
-        $s ~= "]\n";
+        $s ~= ']';
     }
     return $s ~ ']';
 }
@@ -115,17 +115,19 @@ class Gotoh {
                 @!traceC[$i;$j] = $c_prevs.first(:k, * == $cmax);
             
                 if ($!DEBUG +& 4) {
+                    note "after i=$i j=$j a_prevs=($a_prevs) b_prevs=($b_prevs) c_prevs=($c_prevs)";
                     if ($!DEBUG +& 16) {
-                        note "i=$i j=$j A=", @!A[$i;$j], ' B=', @!B[$i;$j], ' C=', @!C[$i;$j];
+                        note "A=", @!A[$i;$j], ' B=', @!B[$i;$j], ' C=', @!C[$i;$j];
                     } else {
-                        note "after i=$i j=$j\nA=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
+                        note "A=", (ms @!A), "\nB=", (ms @!B), "\nC=", (ms @!C);
                     }
                 }
                 if ($!DEBUG +& 2) {
+                    note "after i=$i j=$j";
                     if ($!DEBUG +& 16) {
-                        note "i=$i j=$j tA=", @!traceA[$i;$j], ' tB=', @!traceB[$i;$j], ' tC=', @!traceC[$i;$j];
+                        note "tA=", @!traceA[$i;$j], ' tB=', @!traceB[$i;$j], ' tC=', @!traceC[$i;$j];
                     } else {
-                        note "after i=$i j=$j\ntraceA=", (ms @!traceA), "\ntraceB=", (ms @!traceB), "\ntraceC=", (ms @!traceC);
+                        note "traceA=", (ms @!traceA), "\ntraceB=", (ms @!traceB), "\ntraceC=", (ms @!traceC);
                     }
                 }
             }
@@ -133,11 +135,9 @@ class Gotoh {
         $!score=max(@!A[$!m;$!n],@!B[$!m;$!n],@!C[$!m;$!n]);
     }
     method backtrace() {
-        # if several deletions or insertions occur in a row, only the
-        # first one is returned
         my $i = $!m;
         my $j = $!n;
-        my $mabc=max(@!A[$i;$j], @!B[$i;$j], @!C[$i;$j]);
+        my $mabc=$!score;
         my $mat = $mabc == @!A[$i;$j] ?? 'A' !! $mabc == @!B[$i;$j] ?? 'B' !! 'C';
 
         if ($!DEBUG +& 2) {
@@ -146,7 +146,7 @@ class Gotoh {
             note 'traceC=', ms @!traceC;
         }
         while $i>=0 && $j>=0 && ($i > 0 || $j > 0) {
-            if ($!DEBUG +& 1) { note "i=$i j=$j"; }
+            if ($!DEBUG +& 1) { note "i=$i j=$j mat=$mat"; }
             @!path.unshift([$i, $j, $mat]);
             if $mat eq 'A' {
                 my $prev = @!traceA[$i;$j];
