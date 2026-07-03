@@ -4,7 +4,7 @@ use lib '.';
 use Gotoh;
 
 sub MAIN(Str:D :u($u), Str:D :v($v), Real:D :sp($gap_start),
-         Real:D :ep($gap_extend), Real:D :match_bonus($match_bonus),
+         Real:D :ep($gap_extend), Real:D :match_bonus($match_bonus)=0,
          Real:D :mismatch($mismatch), Int:D :debug($DEBUG)=0,
          Bool:D :s($stringify)=False, Bool:D :w($use_wikipedia)=True
         ) {
