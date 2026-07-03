@@ -9,12 +9,12 @@
 ### General remark
 
 All parameters are signed. If something has to be a penalty
-(i.e. $gapextend$), a negative value has to be given.  Ususally only
+(i.e. $gap\_extend$), a negative value has to be given.  Ususally only
 $matchbonus$ will be non-negative.
 
 ### Initialization
 
-We compare Strings $u$ (length $m$) and $v$ (length $n$).
+We compare strings $u$ (length $m$) and $v$ (length $n$).
 
 At initialization three matrices $A, B, C$ of height $m+1$ and width $n+1$ are
 created. Each element of these matrices contains at the place $(i,j)$
@@ -29,12 +29,12 @@ and left column to $-\infty$ (this denotes that we cannot have a
 
 $B_{00}$ is also set to zero, the rest of the top row is $-\infty$ (we
 cannot have deleted elements before the start of the string). The left
-column is set to $gapstart$, $gapstart+gapextend$,
-$gapstart+2*gapextend$ etc. denoting the score for having deleted the initial character(s).
+column is set to $gap\_start$, $gap\_start+gap\_extend$,
+$gap\_start+2*gap\_extend$ etc. denoting the score for having deleted the initial character(s).
 
 $C_{00}$ is zero, the rest of the left column is $-\infty$ (we cannot
-have insertion before start) and the top row is set to $gapstart$,
-$gapstart+gapextend$, $gapstart+2*gapextend$ etc. denoting the score
+have insertion before start) and the top row is set to $gap\_start$,
+$gap\_start+gap\_extend$, $gap\_start+2*gap\_extend$ etc. denoting the score
 for having gained the initial character(s) by insertion.
 
 ### Double loop
@@ -94,7 +94,7 @@ prepend the triple $(i,j,matrixletter)$ to the trace.
 ## Practical example
 
 We compare the strings $u={\rm "xa"}$ and $v={\rm "yxb"}$ with the
-weights $gapstart=-1$, $gapextend=-0.1$, $matchbonus=0.01$ and
+weights $gap\_start=-1$, $gap\_extend=-0.1$, $matchbonus=0.01$ and
 $mismatch=0.75$.
 
 After initialization we have
@@ -115,12 +115,12 @@ $$traceA=traceB=traceC=\begin{bmatrix}0 & 0 & 0 & 0\\
 0 & 0 & 0 & 0\\
 0 & 0 & 0 & 0\end{bmatrix}$$
 
-Step $i=j=1$ sets $A_{11}$ to -0.75 (mismatch added on top of the 0 in $A_{00}$), $B_{11}=-2$ ($gapstart$ added to the -1 above in $C$), $C_{11}=-2$ ($gapstart$ added to the -1 on the left in $B$).
+Step $i=j=1$ sets $A_{11}$ to -0.75 (mismatch added on top of the 0 in $A_{00}$), $B_{11}=-2$ ($gap\_start$ added to the -1 above in $C$), $C_{11}=-2$ ($gap\_start$ added to the -1 on the left in $B$).
 
 $traceA$ remains unchanged, $traceB_{11}=2$ (i.e. we came from $C$), $traceC_{11}=1$ (we came from $B$).
 
 Step $(i=1, j=2)$ makes $A_{12}=-0.99$ ($matchbonus$ added to the -1
-from $C_{01}$), $B_{12}=-2.1$ by adding $gapstart$ to $C_{02}$ (all
+from $C_{01}$), $B_{12}=-2.1$ by adding $gap\_start$ to $C_{02}$ (all
 alternatives would be $-\infty$), $C_{12}=-1.75$ by adding $mismatch$
 to $A_{11}.  Accordingly $traceA_{12}=2$, $traceB_{12}=2$, $traceC_{12}=0$.
 
@@ -149,6 +149,8 @@ $j$ are negative and at least one is positive).
 
 ### Step-by-step analysis of the buggy result
 
+#### Filling the 6 matrices
+
 $$\begin{array}{cccccccc}
  i & j & A_{ij} & B_{ij} & C_{ij} & traceA_{ij} & traceB_{ij} & traceC_{ij} \\
  \hline
@@ -157,9 +159,34 @@ $$\begin{array}{cccccccc}
  1 & 3 & -111 & -2.02 & -2.02 & 2 & 2 & 2
 \end{array}$$
 
-At $i=j=1$ $A_{11}$ is $-10$ as expected, $B_{11}=-2 (from $C_{01}=-1$
-and $gapstart$), $C_{11}=-2$ (from $B_{01}=-1$ and $gapstart$).
+THe contents of $A$, $B$ and $C$ are expected.
 
-$traceA_{11}=0$ because the variable `$a_prev` 
+At $i=j=1$ $A_{11}$ is $-10$ as expected, $B_{11}=-2$ (from $C_{01}=-1$
+and $gap\_start$), $C_{11}=-2$ (from $B_{01}=-1$ and $gap\_start$).
 
-TO BE CONTINUED
+$traceA_{11}=0$ because $a\_prevs=(0,0,0)$ so the first maximum hit is
+selected. $b\_prevs=(-∞,-∞,-2)$ so the last is the maximal value,
+sending $2$ to $traceB$. $c\_prevs=(-∞,-2,-∞)$, sending $1$ to $traceC$.
+
+$i=1, j=2$: $a\_prevs=(-∞,-∞,-1), b\_prevs=(-∞,-∞,-2.01), c\_prevs=(-11,-3,-2.01)$
+so $2$ goes into all trace matrices.
+
+$i=1, j=3$:
+$a\_prevs=(-∞,-∞,-1.01), b\_prevs=(-∞,-∞,-2.02), c\_prevs=(-12,-3.01,-2.02)$ sending again $2$ to all trace
+matrices. Interestingly, $b\_prevs[2]$ and $c\_prevs[2]$ are equal
+(-2.01 each). The first comes from $C_{03}=-1.02$ and $gap\_start$,
+the second comes from $C_{12}=-2.01$ and $gap\_extend$.
+
+#### walking backwards over the matrices
+
+We start with $i=1$, $j=3$. The score came from matrix $B$, so the
+variable $mat$ is set to $"B"$, so $[1,3,B]$ is unshifted onto $path$.
+
+$mat$ is taken from $traceB_{13}$ to be "C", then $i$ is lowered to $0$.
+Now $i=0$, $j=3$, $mat="C"$ which is unshifted onto $path$.
+
+We look into $traceC_{03}==0$ which means $mat$ becomes $"A"$. $j$ is
+reduced to $2$. So we unshift $[0,2,A]$ onto $path$.
+
+The final result is therefore `[[0 2 A] [0 3 C] [1 3 B]]` which is
+clearly wrong -- no (mis)match was ever encountered.
