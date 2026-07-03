@@ -29,7 +29,20 @@ same size and the method `backtrace` computes the backtrace from them.
 
 ## Command-line toy tool g.raku
 
-This runs the code and gives the score and the backtrace. Trivial example:
+This runs the code and gives the score and the backtrace.
+
+Options:
+
+* `-u`, `-v`: strings to be compared
+* `--sp`: gap\_start (is a penalty, so one should give a negative value)
+* `--ep`: gap\_extend (penalty)
+* `--match\_bonus`: score gain for matching characters (default: 0)
+* `--mismatch`: penalty for substitutions
+* `-w`: use the algorithm as in Wikipedia (default=True, use
+  `-w=False` for Gotoh's original version instead of this one)
+* `-s`: try to generate a string describing the backtrace
+
+Trivial example:
 
 ```bash
 raku g.raku -u=foobar -v=foxbar --sp=-1 --ep=-0.1 --match_bonus=0.01 --mismatch=-0.7 
