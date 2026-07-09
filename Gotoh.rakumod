@@ -137,38 +137,69 @@ class Gotoh {
     method backtrace() {
         my $i = $!m;
         my $j = $!n;
-        my $mabc=$!score;
-        my $mat = $mabc == @!A[$i;$j] ?? 'A' !! $mabc == @!B[$i;$j] ?? 'B' !! 'C';
+        my $mabc = $!score;
+        my $mat = $mabc == @!A[$i;$j] ?? 'A'
+                !! $mabc == @!B[$i;$j] ?? 'B'
+                !! 'C';
+        @!path = [];
 
         if ($!DEBUG +& 2) {
             note "after\ntraceA=", ms @!traceA;
             note 'traceB=', ms @!traceB;
             note 'traceC=', ms @!traceC;
         }
-        while $i>=0 && $j>=0 && ($i > 0 || $j > 0) {
+
+        while $i > 0 || $j > 0 {
             if ($!DEBUG +& 1) { note "i=$i j=$j mat=$mat"; }
+            # Treat marginal case first. If i==0||j==0, elements of
+            # neither A/B/C nor traceA/B/C are computed but initilized
+            # in preparematrix.  In these places we select the only
+            # possible continuation without even looking at
+            # trace*[i;j].  Theoretically impossible cases are handled
+            # with die.
+
+            # This is particularly relevant with strongly
+            # (i.e. prohibitively) negative $!mismatch where we might
+            # fall into A[i;j] otherwise.
+            if $j == 0 {
+                # only deletion (i.e. walk upwards) possible
+                die "Inconsistent matrix state in backtracking: mat=$mat i=$i, j=0"
+                    if $mat ne 'B';
+                @!path.unshift([$i, $j, 'B']);
+                $i--;
+                next;
+            }
+            if $i == 0 {
+                # only insertion (i.e. walk leftwards) possible
+                die "inconsistent matrix state in backtracking: mat=$mat i=0, j=$j"
+                    if $mat ne 'C';
+                @!path.unshift([$i, $j, 'C']);
+                $j--;
+                next;
+            }
+
             @!path.unshift([$i, $j, $mat]);
+
             if $mat eq 'A' {
                 my $prev = @!traceA[$i;$j];
-                $mat = <A B C>[$prev];
                 $i--; $j--;
+                $mat = <A B C>[$prev];
             }
             elsif $mat eq 'B' {
                 my $prev = @!traceB[$i;$j];
-                $mat = <A B C>[$prev];
                 $i--;
+                $mat = <A B C>[$prev];
             }
             else {
                 my $prev = @!traceC[$i;$j];
-                $mat = <A B C>[$prev];
                 $j--;
+                $mat = <A B C>[$prev];
             }
         }
         return @!path;
     }
     method backtrace_string() {
-        # currently broken
-        self.backtrace unless defined @!path;
+        self.backtrace unless @!path;
         my Str $res='';
         for (@!path) -> $triple {
             my $i=$triple[0]; my $j=$triple[1]; my $which=$triple[2];
