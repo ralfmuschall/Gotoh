@@ -16,7 +16,7 @@ sub MAIN(Str:D :u($u), Str:D :v($v), Real:D :sp($gap_start),
                     wikipedia => $use_wikipedia ?? 1 !! 0,
                     DEBUG => $DEBUG);
     say 'score: ',$g.score;
-    say 'backtrace: ',$g.backtrace;
+    say 'backtrace: ',$g.backtrace.raku;
     if ($stringify) {
         say $g.backtrace_string;
     }
