@@ -49,9 +49,9 @@ class Gotoh {
     has Real $.match_bonus is required;
     has Real $.mismatch is required;
     has Int $!wikipedia is built; # use wikipedia pseudocode instead of original paper
-    has Real $.score is rw;
+    has num $.score is rw;
     has @!path; # for backtrace
-    method g(Int $l --> Real) { $!gap_start+($l-1)*$!gap_extend; };
+    method g(Int $l --> num) { Num($!gap_start+($l-1)*$!gap_extend); };
     submethod TWEAK() {
         $!m=$!u.chars; $!n=$!v.chars;
         @!U=$!u.ords;  @!V=$!v.ords;
@@ -60,10 +60,10 @@ class Gotoh {
         self.computematrix;
     }
     method preparematrix() {
-        @!A=[[0 xx $!n+1] xx $!m+1];
-        @!B=[[0 xx $!n+1] xx $!m+1];
-        @!C=[[0 xx $!n+1] xx $!m+1];
-        @!A[0;0]=0; @!B[0;0]=0; @!C[0;0]=0;
+        @!A = do for 0..$!m { my num @row = 0e0 xx $!n+1; @row };
+        @!B = do for 0..$!m { my num @row = 0e0 xx $!n+1; @row };
+        @!C = do for 0..$!m { my num @row = 0e0 xx $!n+1; @row };
+        @!A[0;0]=0e0; @!B[0;0]=0e0; @!C[0;0]=0e0;
         for 1..$!m {
             @!A[$_;0]=-Inf;
             @!B[$_;0]=self.g($_);
@@ -79,9 +79,9 @@ class Gotoh {
             note 'B=', ms @!B;
             note 'C=', ms @!C;
         }
-        @!traceA=[[0 xx $!n+1] xx $!m+1];
-        @!traceB=[[0 xx $!n+1] xx $!m+1];
-        @!traceC=[[0 xx $!n+1] xx $!m+1];
+        @!traceA = do for 0..$!m { my int8 @row = 0 xx $!n+1; @row };
+        @!traceB = do for 0..$!m { my int8 @row = 0 xx $!n+1; @row };
+        @!traceC = do for 0..$!m { my int8 @row = 0 xx $!n+1; @row };
         if (($!DEBUG +& 2) && !($!DEBUG +& 32)) {
             note "init\ntraceA=", ms @!traceA;
             note 'traceB=', ms @!traceB;
@@ -214,9 +214,9 @@ class Gotoh {
                     $res ~= "($i,$j:=$ui);" unless $!DEBUG +& 64;
                 }
             } elsif ($which eq 'B') {
-                $res ~= "$i,$j,(-" ~ (@!U[$i-1]).chr  ~ ');';
+                $res ~= "($i,$j,-" ~ (@!U[$i-1]).chr ~ ');';
             } else {
-                $res ~= "$i,$j,(+" ~ (@!V[$j-1]).chr ~ ');';
+                $res ~= "($i,$j,+" ~ (@!V[$j-1]).chr ~ ');';
             }
         }
         return $res;
