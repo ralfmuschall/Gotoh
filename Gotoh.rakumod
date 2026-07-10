@@ -12,6 +12,7 @@
 #  3: internals of backtrace_string
 #  4: restrict matrix output to the recently changed entry
 #  5: suppress output of initial matrices (when bit 1 and/or 2 are set)
+#  6: suppress identity output in backtrace-string
 
 # minimalist .Str for a matrix
 sub ms($a --> Str) {
@@ -208,14 +209,14 @@ class Gotoh {
                 my $ui=@!U[$i-1].chr;
                 my $vj=@!V[$j-1].chr;
                 if ($ui ne $vj) {
-                    $res ~= "($ui -> $vj)";
+                    $res ~= "($i,$j,$ui -> $vj);";
                 } else {
-                    $res ~= "(=$ui)";
+                    $res ~= "($i,$j:=$ui);" unless $!DEBUG +& 64;
                 }
             } elsif ($which eq 'B') {
-                $res ~= '(-' ~ (@!U[$i-1]).chr  ~ ')';
+                $res ~= "$i,$j,(-" ~ (@!U[$i-1]).chr  ~ ');';
             } else {
-                $res ~= '(+' ~ (@!V[$j-1]).chr ~ ')';
+                $res ~= "$i,$j,(+" ~ (@!V[$j-1]).chr ~ ');';
             }
         }
         return $res;
